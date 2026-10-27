@@ -1,0 +1,37 @@
+(* Dew point reset: CHS-TSP-OUT = MIN(MAX(CHS-TSP-IN, DH-DPMAX + DEW-CHSTSP-DT), CH-OUT-MAX) *)
+DEW_CA01 (TEMP := V_CA_T[1], RH := V_CA_H[1], DP => DP_CA[1]);
+DEW_CA02 (TEMP := V_CA_T[2], RH := V_CA_H[2], DP => DP_CA[2]);
+DEW_CA03 (TEMP := V_CA_T[3], RH := V_CA_H[3], DP => DP_CA[3]);
+DEW_CA04 (TEMP := V_CA_T[4], RH := V_CA_H[4], DP => DP_CA[4]);
+DEW_CA05 (TEMP := V_CA_T[5], RH := V_CA_H[5], DP => DP_CA[5]);
+DEW_CA06 (TEMP := V_CA_T[6], RH := V_CA_H[6], DP => DP_CA[6]);
+DEW_CA07 (TEMP := V_CA_T[7], RH := V_CA_H[7], DP => DP_CA[7]);
+DEW_CA08 (TEMP := V_CA_T[8], RH := V_CA_H[8], DP => DP_CA[8]);
+DEW_CA09 (TEMP := V_CA_T[9], RH := V_CA_H[9], DP => DP_CA[9]);
+DEW_CA10 (TEMP := V_CA_T[10], RH := V_CA_H[10], DP => DP_CA[10]);
+DEW_CA11 (TEMP := V_CA_T[11], RH := V_CA_H[11], DP => DP_CA[11]);
+DEW_CA12 (TEMP := V_CA_T[12], RH := V_CA_H[12], DP => DP_CA[12]);
+DEW_CA13 (TEMP := V_CA_T[13], RH := V_CA_H[13], DP => DP_CA[13]);
+DEW_CA14 (TEMP := V_CA_T[14], RH := V_CA_H[14], DP => DP_CA[14]);
+DEW_CA15 (TEMP := V_CA_T[15], RH := V_CA_H[15], DP => DP_CA[15]);
+DEW_CA16 (TEMP := V_CA_T[16], RH := V_CA_H[16], DP => DP_CA[16]);
+DEW_CA17 (TEMP := V_CA_T[17], RH := V_CA_H[17], DP => DP_CA[17]);
+DEW_CA18 (TEMP := V_CA_T[18], RH := V_CA_H[18], DP => DP_CA[18]);
+DEW_CA19 (TEMP := V_CA_T[19], RH := V_CA_H[19], DP => DP_CA[19]);
+
+DH_DPMAX_OK := FALSE;
+DPMAX_TMP := -100.0;
+FOR I := 1 TO 19 DO
+    IF OK_CA_T[I] AND OK_CA_H[I] THEN
+        DH_DPMAX_OK := TRUE;
+        IF DP_CA[I] > DPMAX_TMP THEN DPMAX_TMP := DP_CA[I]; END_IF;
+    END_IF;
+END_FOR;
+IF DH_DPMAX_OK THEN
+    DH_DPMAX := DPMAX_TMP;
+END_IF;   (* no healthy sensor: hold the last value *)
+
+DEW_CALC := DH_DPMAX + DEW_CHSTSP_DT;
+CHS_TSP_OUT := MIN(MAX(CHS_TSP_IN, DEW_CALC), CH_OUT_MAX);
+ALM_DEW_RESET := DEW_CALC > CHS_TSP_IN;
+ALM_DEW_OVERMAX := DEW_CALC > CH_OUT_MAX;

@@ -1,0 +1,451 @@
+{
+  "CHP01": [
+    {
+      "name": "P06_AuxPath",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Boot",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ChemGrant",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ConfigFault",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_FastRestartApproved",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_FaultCode",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_FlowValid",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_InitDone",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Isolatable",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_LocalReset",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_OffPreset",
+      "type": "TIME",
+      "address": null
+    },
+    {
+      "name": "P06_Path",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_PowerEvent",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_QualTemp",
+      "type": "REAL",
+      "address": null
+    },
+    {
+      "name": "P06_RawFault",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ResetEdge",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ResetOld",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_RunSafe",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_SeqFault",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_State",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_StopFault",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_TChiller",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TESHold",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_TFlow",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TLostFlow",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TOff",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TOn",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TPost",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TPumpStop",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TStable",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TStop",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TValve",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TX_EXT",
+      "type": "INT",
+      "address": "%MW725"
+    },
+    {
+      "name": "P06_TX_VER",
+      "type": "INT",
+      "address": "%MW724"
+    },
+    {
+      "name": "P06_TempValid",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Trip",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Water",
+      "type": "BOOL",
+      "address": null
+    }
+  ],
+  "SMCL": [
+    {
+      "name": "P06_Adopted",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_AllKnown",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_BMS_LOAD_VALID",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Boot",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_CanStop",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ChemBusy",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ChemID",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_ConfigFault",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Ext",
+      "type": "ARRAY[1..5] OF INT",
+      "address": null
+    },
+    {
+      "name": "P06_Fresh",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_HealthyRequested",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_Inhibit",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_InitDone",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Known",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_LoadValid",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Local",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Occupied",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_RX_EXT_1",
+      "type": "INT",
+      "address": "%MW425"
+    },
+    {
+      "name": "P06_RX_EXT_2",
+      "type": "INT",
+      "address": "%MW455"
+    },
+    {
+      "name": "P06_RX_EXT_3",
+      "type": "INT",
+      "address": "%MW485"
+    },
+    {
+      "name": "P06_RX_EXT_4",
+      "type": "INT",
+      "address": "%MW515"
+    },
+    {
+      "name": "P06_RX_EXT_5",
+      "type": "INT",
+      "address": "%MW545"
+    },
+    {
+      "name": "P06_RX_VER_1",
+      "type": "INT",
+      "address": "%MW424"
+    },
+    {
+      "name": "P06_RX_VER_2",
+      "type": "INT",
+      "address": "%MW454"
+    },
+    {
+      "name": "P06_RX_VER_3",
+      "type": "INT",
+      "address": "%MW484"
+    },
+    {
+      "name": "P06_RX_VER_4",
+      "type": "INT",
+      "address": "%MW514"
+    },
+    {
+      "name": "P06_RX_VER_5",
+      "type": "INT",
+      "address": "%MW544"
+    },
+    {
+      "name": "P06_Ready",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ReplacementBad",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_ReplacementOK",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_RotNew",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_RotOld",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_RotTarget",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_RotateAlarm",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_RotatePending",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_RunningOut",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_SpaceActive",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_SpaceReset",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_StartAlarm",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_StartID",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_StartReset",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_StopAlarm",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_StopID",
+      "type": "INT",
+      "address": null
+    },
+    {
+      "name": "P06_StopReset",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_TOverlap",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TRotation",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TSpace",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TStart",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TStop",
+      "type": "TON",
+      "address": null
+    },
+    {
+      "name": "P06_TempOK",
+      "type": "ARRAY[1..5] OF BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_UnknownAlarm",
+      "type": "BOOL",
+      "address": null
+    },
+    {
+      "name": "P06_Version",
+      "type": "ARRAY[1..5] OF INT",
+      "address": null
+    }
+  ]
+}

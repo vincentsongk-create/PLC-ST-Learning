@@ -1,0 +1,42 @@
+{
+  "CHP01": {
+    "parsed_sections": [
+      "INIT",
+      "IF_RX",
+      "Chiller_Start",
+      "Chiller_Stop",
+      "FPM_ENA",
+      "Chemical_Water_Treatment",
+      "OUT_ARB",
+      "P06_FINAL_GUARD",
+      "ALARM",
+      "IF_TX",
+      "UNIT_FAULT"
+    ],
+    "undeclared_identifiers": [],
+    "archive_crc": "passed",
+    "compiler_validation": "NOT RUN",
+    "software": "Control Expert V16.2",
+    "parser_only_normalization": "Schneider %S system bits mapped to symbolic names; native source untouched",
+    "hardware_config_and_existing_variable_addresses": "unchanged",
+    "unchanged_non_source_archive_members": "byte-identical"
+  },
+  "SMCL": {
+    "parsed_sections": [
+      "S00_INIT",
+      "S10_IF_RX",
+      "S20_CALC",
+      "S30_STAGE",
+      "S40_IF_TX",
+      "S50_ALARM",
+      "S90_SIM_M340"
+    ],
+    "undeclared_identifiers": [],
+    "archive_crc": "passed",
+    "compiler_validation": "NOT RUN",
+    "software": "Control Expert V16.2",
+    "parser_only_normalization": "Schneider %S system bits mapped to symbolic names; native source untouched",
+    "hardware_config_and_existing_variable_addresses": "unchanged",
+    "unchanged_non_source_archive_members": "byte-identical"
+  }
+}

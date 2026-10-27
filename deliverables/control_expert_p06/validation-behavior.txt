@@ -1,0 +1,27 @@
+test_cross_pair_flow_selection (test_p06.Fleet.test_cross_pair_flow_selection) ... ok
+test_disable_cancels_pending_start_into_orderly_stop (test_p06.Fleet.test_disable_cancels_pending_start_into_orderly_stop) ... ok
+test_late_peer_echo_is_adopted_before_dispatch (test_p06.Fleet.test_late_peer_echo_is_adopted_before_dispatch) ... ok
+test_legacy_protocol_is_not_selected (test_p06.Fleet.test_legacy_protocol_is_not_selected) ... ok
+test_old_unit_fault_keeps_replacement (test_p06.Fleet.test_old_unit_fault_keeps_replacement) ... ok
+test_one_start_is_in_flight (test_p06.Fleet.test_one_start_is_in_flight) ... ok
+test_replacement_fault_keeps_original (test_p06.Fleet.test_replacement_fault_keeps_original) ... ok
+test_rotation_waits_for_continuous_valid_capacity (test_p06.Fleet.test_rotation_waits_for_continuous_valid_capacity) ... ok
+test_spacing_and_timer_reset_between_transactions (test_p06.Fleet.test_spacing_and_timer_reset_between_transactions) ... ok
+test_unknown_peer_is_never_forced_off_after_recovery_timeout (test_p06.Fleet.test_unknown_peer_is_never_forced_off_after_recovery_timeout) ... ok
+test_archives_and_unbuilt_marker (test_p06.NativePackage.test_archives_and_unbuilt_marker) ... ok
+test_chiller_refusal_has_independent_timeout (test_p06.Unit.test_chiller_refusal_has_independent_timeout) ... ok
+test_flow_bad_quality_cannot_use_held_good_value (test_p06.Unit.test_flow_bad_quality_cannot_use_held_good_value) ... ok
+test_flow_loss_cuts_physical_chiller_output (test_p06.Unit.test_flow_loss_cuts_physical_chiller_output) ... ok
+test_illegal_state_is_a_fault (test_p06.Unit.test_illegal_state_is_a_fault) ... ok
+test_low_flow_start_fails_independently_of_supply_temperature (test_p06.Unit.test_low_flow_start_fails_independently_of_supply_temperature) ... ok
+test_maintenance_holds_valves_until_actual_stop_and_postrun (test_p06.Unit.test_maintenance_holds_valves_until_actual_stop_and_postrun) ... ok
+test_minimum_off_time_is_enforced (test_p06.Unit.test_minimum_off_time_is_enforced) ... ok
+test_quick_restart_option_is_explicit_and_does_not_clear_faults (test_p06.Unit.test_quick_restart_option_is_explicit_and_does_not_clear_faults) ... ok
+test_reenable_cannot_reverse_incomplete_stop (test_p06.Unit.test_reenable_cannot_reverse_incomplete_stop) ... ok
+test_stuck_chiller_never_advances_to_stop_pump (test_p06.Unit.test_stuck_chiller_never_advances_to_stop_pump) ... ok
+test_useful_tes_discharge_is_held_until_handover (test_p06.Unit.test_useful_tes_discharge_is_held_until_handover) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 11.338s
+
+OK
