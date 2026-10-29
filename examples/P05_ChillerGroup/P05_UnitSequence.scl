@@ -1,0 +1,232 @@
+// Conceptual unit executor: hydraulic route is an EXTERNAL reviewed controller.
+// No mapping to CHV1/2/3 or CHBPV is assumed. NOT TIA compiled.
+FUNCTION_BLOCK "FB_P05_UnitSequence"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      Authority : Bool;
+      InitStopped : Bool; // permitted ONLY when unit and route are proven stopped
+      RequestRun : Bool;
+      ResetFault : Bool;
+      DataValid : Bool;
+      AutoRemote : Bool;
+      ConfigReviewed : Bool;
+      CycleSeconds : LReal;
+      RouteReady : Bool; // reviewed cooling route established; NOT any single valve
+      RouteClosed : Bool;
+      PumpRunning : Bool;
+      PumpStopped : Bool;
+      PumpFault : Bool;
+      ChillerRunning : Bool;
+      ChillerStopped : Bool;
+      ChillerFault : Bool;
+      FlowOK : Bool; // independent valid flow proof and correct threshold
+      StartStepTimeout : LReal;
+      StopStepTimeout : LReal;
+      FlowProveSeconds : LReal;
+      PumpPostRunSeconds : LReal;
+   END_VAR
+   VAR_OUTPUT
+      CommandValid : Bool;
+      RouteRequest : Bool;
+      PumpRequest : Bool;
+      ChillerRequest : Bool;
+      CoolingProven : Bool;
+      StoppedProven : Bool;
+      FaultLatched : Bool;
+      SequenceBlocked : Bool;
+      ConfigError : Bool;
+      NeedsReconcile : Bool;
+      State : Int; // 0 idle,10 route,20 pump,30 flow,40 chiller,50 run,
+                   // 60 stop chiller,70 postrun,80 stop pump,90 close route
+   END_VAR
+   VAR
+      Initialized : Bool;
+      Age : LReal;
+      FlowAge : LReal;
+      PreviousState : Int;
+      PreviousReset : Bool;
+   END_VAR
+   VAR_TEMP
+      resetEdge : Bool;
+   END_VAR
+BEGIN
+   #CommandValid := FALSE;
+   #CoolingProven := FALSE;
+   #StoppedProven := FALSE;
+   #SequenceBlocked := FALSE;
+   #resetEdge := #ResetFault AND NOT #PreviousReset;
+   #PreviousReset := #ResetFault;
+   #ConfigError := NOT #ConfigReviewed
+      OR NOT ((#CycleSeconds > 0.0) AND (#CycleSeconds <= 1.0))
+      OR NOT (#StartStepTimeout > 0.0) OR NOT (#StopStepTimeout > 0.0)
+      OR NOT ((#FlowProveSeconds > 0.0) AND (#FlowProveSeconds < #StartStepTimeout))
+      OR NOT (#PumpPostRunSeconds >= 0.0);
+   #NeedsReconcile := NOT #Initialized;
+   IF #ConfigError OR NOT #Authority OR NOT #DataValid OR NOT #AutoRemote THEN
+      RETURN; // no writes; external local/OEM fallback required
+   END_IF;
+   IF (#PumpRunning AND #PumpStopped) OR (#ChillerRunning AND #ChillerStopped)
+      OR (#RouteReady AND #RouteClosed) THEN
+      #NeedsReconcile := TRUE;
+      RETURN;
+   END_IF;
+   IF #InitStopped THEN
+      IF #PumpStopped AND #ChillerStopped AND #RouteClosed THEN
+         #State := 0;
+         #PreviousState := 0;
+         #Age := 0.0;
+         #FlowAge := 0.0;
+         #RouteRequest := FALSE;
+         #PumpRequest := FALSE;
+         #ChillerRequest := FALSE;
+         #Initialized := TRUE;
+      ELSE
+         #Initialized := FALSE; // running/mid-sequence adoption is not implemented
+      END_IF;
+   END_IF;
+   #NeedsReconcile := NOT #Initialized;
+   IF NOT #Initialized THEN
+      RETURN;
+   END_IF;
+   #CommandValid := TRUE;
+   IF #resetEdge AND (#State = 0) AND #PumpStopped AND #ChillerStopped
+      AND #RouteClosed AND NOT #PumpFault AND NOT #ChillerFault THEN
+      #FaultLatched := FALSE;
+   END_IF;
+   IF #State <> #PreviousState THEN
+      #Age := 0.0;
+      #PreviousState := #State;
+   END_IF;
+   #Age := #Age + #CycleSeconds;
+   IF #PumpFault OR #ChillerFault THEN
+      #FaultLatched := TRUE;
+   END_IF;
+   IF (#State = 50) AND (NOT #FlowOK OR NOT #RouteReady
+      OR NOT #PumpRunning OR NOT #ChillerRunning) THEN
+      #FaultLatched := TRUE;
+   END_IF;
+   IF (#State >= 10) AND (#State <= 50)
+      AND (NOT #RequestRun OR #FaultLatched) THEN
+      #State := 60;
+      #Age := 0.0;
+      #PreviousState := 60;
+   END_IF;
+   CASE #State OF
+      0:
+         #RouteRequest := FALSE;
+         #PumpRequest := FALSE;
+         #ChillerRequest := FALSE;
+         IF NOT (#PumpStopped AND #ChillerStopped AND #RouteClosed) THEN
+            #CommandValid := FALSE;
+            #Initialized := FALSE;
+            #NeedsReconcile := TRUE;
+         ELSIF #RequestRun AND NOT #FaultLatched THEN
+            #State := 10;
+         END_IF;
+      10:
+         #RouteRequest := TRUE;
+         IF #RouteReady THEN
+            #State := 20;
+         ELSIF #Age >= #StartStepTimeout THEN
+            #FaultLatched := TRUE;
+            #State := 60;
+         END_IF;
+      20:
+         #PumpRequest := TRUE;
+         IF NOT #RouteReady THEN
+            #FaultLatched := TRUE;
+            #State := 60;
+         ELSIF #PumpRunning THEN
+            #FlowAge := 0.0;
+            #State := 30;
+         ELSIF #Age >= #StartStepTimeout THEN
+            #FaultLatched := TRUE;
+            #State := 60;
+         END_IF;
+      30:
+         IF NOT #RouteReady OR NOT #PumpRunning THEN
+            #FaultLatched := TRUE;
+            #State := 60;
+         ELSE
+            IF #FlowOK THEN
+               #FlowAge := #FlowAge + #CycleSeconds;
+            ELSE
+               #FlowAge := 0.0;
+            END_IF;
+            IF #FlowAge >= #FlowProveSeconds THEN
+               #State := 40;
+            ELSIF #Age >= #StartStepTimeout THEN
+               #FaultLatched := TRUE;
+               #State := 60;
+            END_IF;
+         END_IF;
+      40:
+         IF #RouteReady AND #PumpRunning AND #FlowOK THEN
+            #ChillerRequest := TRUE;
+            IF #ChillerRunning THEN
+               #State := 50;
+            ELSIF #Age >= #StartStepTimeout THEN
+               #FaultLatched := TRUE;
+               #State := 60;
+            END_IF;
+         ELSE
+            #FaultLatched := TRUE;
+            #State := 60;
+         END_IF;
+      50:
+         ; // maintained commands, feedback monitored above
+      60:
+         #ChillerRequest := FALSE;
+         // Keep existing hydraulic/pump requests until chiller OFF is proven.
+         IF #ChillerStopped THEN
+            #State := 70;
+         ELSIF #Age >= #StopStepTimeout THEN
+            #FaultLatched := TRUE;
+            #SequenceBlocked := TRUE; // do not force pump stop or close route
+         END_IF;
+      70:
+         IF NOT #ChillerStopped THEN
+            #State := 60;
+         ELSIF #Age >= #PumpPostRunSeconds THEN
+            #State := 80;
+         END_IF;
+      80:
+         IF NOT #ChillerStopped THEN
+            #State := 60;
+         ELSE
+            #PumpRequest := FALSE;
+            IF #PumpStopped THEN
+               #State := 90;
+            ELSIF #Age >= #StopStepTimeout THEN
+               #FaultLatched := TRUE;
+               #SequenceBlocked := TRUE;
+            END_IF;
+         END_IF;
+      90:
+         IF NOT #ChillerStopped OR NOT #PumpStopped THEN
+            #FaultLatched := TRUE;
+            #SequenceBlocked := TRUE;
+         ELSE
+            #RouteRequest := FALSE;
+            IF #RouteClosed THEN
+               #State := 0;
+            ELSIF #Age >= #StopStepTimeout THEN
+               #FaultLatched := TRUE;
+               #SequenceBlocked := TRUE;
+            END_IF;
+         END_IF;
+   ELSE
+      #CommandValid := FALSE;
+      #Initialized := FALSE;
+      #NeedsReconcile := TRUE;
+   END_CASE;
+   // Apply start/run-abort action in the SAME scan as a detected fault/timeout.
+   IF #State = 60 THEN
+      #ChillerRequest := FALSE;
+   END_IF;
+   #CoolingProven := (#State = 50) AND #RouteReady AND #PumpRunning
+      AND #FlowOK AND #ChillerRunning AND NOT #FaultLatched;
+   #StoppedProven := (#State = 0) AND #PumpStopped AND #ChillerStopped
+      AND #RouteClosed;
+END_FUNCTION_BLOCK

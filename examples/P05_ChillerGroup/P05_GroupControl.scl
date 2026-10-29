@@ -1,0 +1,311 @@
+// P05 conceptual group supervisor, revision 0.1.
+// Target assumption: TIA Portal V18 / S7-1500. NOT compiled in TIA.
+// This file does not command physical pumps, valves or chillers.
+// Import types before FB. Call FB once in a fixed cyclic OB.
+TYPE "P05_UnitStatus"
+VERSION : 0.1
+   STRUCT
+      Installed : Bool;
+      AutoRemote : Bool;
+      CommHealthy : Bool;
+      Available : Bool; // OEM/local controller permits a new start
+      Fault : Bool;
+      CoolingProven : Bool; // local executor proves complete cooling operation
+      StoppedProven : Bool; // complete safe stop, including pump post-run
+      RunHours : LReal; // trusted non-negative lifetime hours from local controller
+   END_STRUCT;
+END_TYPE
+
+TYPE "P05_GroupConfig"
+VERSION : 0.1
+   STRUCT
+      Reviewed : Bool; // default FALSE: commissioning review required
+      UnitCount : Int; // 5 for drawing p18; p19 shows 3, confirm separately
+      MinRunSeconds : LReal;
+      MinOffSeconds : LReal;
+      StartTimeoutSeconds : LReal;
+      StopTimeoutSeconds : LReal;
+      StageGapSeconds : LReal;
+   END_STRUCT;
+END_TYPE
+
+FUNCTION_BLOCK "FB_P05_GroupControl"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      Init : Bool; // one scan after cold start or deliberate ownership acquisition
+      Authority : Bool; // external redundant-controller ownership arbitration
+      Enable : Bool; // normal group enable; FALSE requests sequenced shutdown
+      ResetFaults : Bool; // rising edge; only fully stopped healthy units reset
+      DemandValid : Bool;
+      DemandUnits : Int; // upstream reviewed SOO supplies required equivalent units
+      CycleSeconds : LReal; // measured cyclic interval, 0 < value <= 1 second
+      Cfg : "P05_GroupConfig";
+      Unit : Array[1..5] of "P05_UnitStatus";
+   END_VAR
+   VAR_OUTPUT
+      RequestRun : Array[1..5] of Bool; // maintained request to UNIT EXECUTOR
+      CommandValid : Bool; // writer MUST suppress writes when FALSE
+      State : Array[1..5] of Int; // 0 stopped,10 starting,20 cooling,30 stopping
+      FaultLatched : Array[1..5] of Bool;
+      CoolingCount : Int;
+      CommittedCount : Int; // healthy proven cooling plus pending starts
+      DemandShortfall : Bool;
+      NoStartCandidate : Bool;
+      ConfigError : Bool;
+      ObservationInvalid : Bool;
+      TransitionTimeout : Bool;
+      NeedsInit : Bool;
+   END_VAR
+   VAR
+      Initialized : Bool;
+      PreviousReset : Bool;
+      OnAge : Array[1..5] of LReal;
+      OffAge : Array[1..5] of LReal;
+      TransitionAge : Array[1..5] of LReal;
+      GapAge : LReal;
+      PreviousAuto : Array[1..5] of Bool;
+   END_VAR
+   VAR_TEMP
+      i : Int;
+      target : Int;
+      candidate : Int;
+      score : LReal;
+      resetEdge : Bool;
+      anyTransition : Bool;
+      mayStart : Bool;
+   END_VAR
+BEGIN
+   #CommandValid := FALSE;
+   #CoolingCount := 0;
+   #CommittedCount := 0;
+   #NoStartCandidate := FALSE;
+   #TransitionTimeout := FALSE;
+   #DemandShortfall := FALSE;
+   #ObservationInvalid := FALSE;
+   #resetEdge := #ResetFaults AND NOT #PreviousReset;
+   #PreviousReset := #ResetFaults;
+   #ConfigError := NOT #Cfg.Reviewed
+      OR (#Cfg.UnitCount < 1) OR (#Cfg.UnitCount > 5)
+      OR NOT ((#CycleSeconds > 0.0) AND (#CycleSeconds <= 1.0))
+      OR NOT (#Cfg.MinRunSeconds >= 0.0)
+      OR NOT (#Cfg.MinOffSeconds >= 0.0)
+      OR NOT (#Cfg.StageGapSeconds > 0.0)
+      OR NOT (#Cfg.StartTimeoutSeconds > 0.0)
+      OR NOT (#Cfg.StopTimeoutSeconds > 0.0)
+      OR (#DemandUnits < 0) OR (#DemandUnits > #Cfg.UnitCount);
+   #NeedsInit := NOT #Initialized;
+   IF #ConfigError THEN
+      RETURN;
+   END_IF;
+
+   // Unknown/contradictory status blocks group transitions. No stale writes.
+   FOR #i := 1 TO #Cfg.UnitCount DO
+      IF #Unit[#i].Installed THEN
+         IF NOT #Unit[#i].CommHealthy
+            OR (#Unit[#i].CoolingProven AND #Unit[#i].StoppedProven)
+            OR NOT (#Unit[#i].RunHours >= 0.0) THEN
+            #ObservationInvalid := TRUE;
+         END_IF;
+         IF #Unit[#i].CoolingProven AND #Unit[#i].CommHealthy
+            AND NOT #Unit[#i].Fault THEN
+            #CoolingCount := #CoolingCount + 1;
+         END_IF;
+      END_IF;
+   END_FOR;
+   IF NOT #Authority OR #ObservationInvalid THEN
+      RETURN;
+   END_IF;
+
+   // Mode changes require deliberate reconciliation before any new writes.
+   IF #Initialized AND NOT #Init THEN
+      FOR #i := 1 TO #Cfg.UnitCount DO
+         IF #Unit[#i].Installed AND (#PreviousAuto[#i] <> #Unit[#i].AutoRemote) THEN
+            #Initialized := FALSE;
+         END_IF;
+      END_FOR;
+   END_IF;
+
+   // Adoption is allowed only from unambiguous stable unit states.
+   // Restart mid-sequence requires unit-controller reconciliation, not blind reset.
+   IF #Init THEN
+      FOR #i := 1 TO #Cfg.UnitCount DO
+         IF #Unit[#i].Installed
+            AND NOT (#Unit[#i].CoolingProven OR #Unit[#i].StoppedProven) THEN
+            #ObservationInvalid := TRUE;
+         END_IF;
+      END_FOR;
+      IF #ObservationInvalid THEN
+         #Initialized := FALSE;
+         #NeedsInit := TRUE;
+         RETURN;
+      END_IF;
+      FOR #i := 1 TO 5 DO
+         #PreviousAuto[#i] := #Unit[#i].AutoRemote;
+         #RequestRun[#i] := FALSE;
+         #State[#i] := 0;
+         #OnAge[#i] := 0.0;
+         #OffAge[#i] := 0.0; // conservative full minimum-off wait after adoption
+         #TransitionAge[#i] := 0.0;
+         IF #i <= #Cfg.UnitCount THEN
+            IF #Unit[#i].Installed AND #Unit[#i].CoolingProven THEN
+               #State[#i] := 20;
+               #RequestRun[#i] := TRUE;
+            END_IF;
+         END_IF;
+      END_FOR;
+      #GapAge := 0.0;
+      #Initialized := TRUE;
+   END_IF;
+   #NeedsInit := NOT #Initialized;
+   IF NOT #Initialized THEN
+      RETURN;
+   END_IF;
+
+   // Hold requests if demand is untrusted, even if Enable is FALSE.
+   // Independent OEM protection and local fallback remain responsible for safety.
+   IF NOT #DemandValid THEN
+      RETURN;
+   END_IF;
+   #CommandValid := TRUE;
+   #target := #DemandUnits;
+   IF NOT #Enable THEN
+      #target := 0;
+   END_IF;
+   #GapAge := MIN(IN1 := #GapAge + #CycleSeconds,
+                  IN2 := #Cfg.StageGapSeconds);
+   #anyTransition := FALSE;
+
+   FOR #i := 1 TO #Cfg.UnitCount DO
+      IF #Unit[#i].Installed THEN
+         IF #resetEdge AND #Unit[#i].StoppedProven
+            AND NOT #Unit[#i].Fault AND #Unit[#i].AutoRemote THEN
+            #FaultLatched[#i] := FALSE;
+            IF #State[#i] = 30 THEN
+               #State[#i] := 0;
+               #TransitionAge[#i] := 0.0;
+            END_IF;
+         END_IF;
+         IF #Unit[#i].StoppedProven THEN
+            #OffAge[#i] := MIN(IN1 := #OffAge[#i] + #CycleSeconds,
+                              IN2 := #Cfg.MinOffSeconds);
+         ELSE
+            #OffAge[#i] := 0.0;
+         END_IF;
+         IF #Unit[#i].CoolingProven THEN
+            #OnAge[#i] := MIN(IN1 := #OnAge[#i] + #CycleSeconds,
+                             IN2 := #Cfg.MinRunSeconds);
+         ELSE
+            #OnAge[#i] := 0.0;
+         END_IF;
+
+         // Local/manual units contribute observed cooling but are not commanded.
+         IF #Unit[#i].AutoRemote THEN
+            IF #Unit[#i].Fault
+               OR ((#State[#i] = 20) AND NOT #Unit[#i].CoolingProven) THEN
+               #FaultLatched[#i] := TRUE;
+               IF #RequestRun[#i] THEN
+                  #RequestRun[#i] := FALSE;
+                  #State[#i] := 30;
+                  #TransitionAge[#i] := 0.0;
+               END_IF;
+            END_IF;
+            CASE #State[#i] OF
+               0:
+                  #RequestRun[#i] := FALSE;
+               10:
+                  IF #Unit[#i].CoolingProven THEN
+                     #State[#i] := 20;
+                     #TransitionAge[#i] := 0.0;
+                  ELSE
+                     #TransitionAge[#i] := #TransitionAge[#i] + #CycleSeconds;
+                     IF #TransitionAge[#i] >= #Cfg.StartTimeoutSeconds THEN
+                        #FaultLatched[#i] := TRUE;
+                        #RequestRun[#i] := FALSE;
+                        #State[#i] := 30;
+                        #TransitionAge[#i] := 0.0;
+                     END_IF;
+                  END_IF;
+               20:
+                  ;
+               30:
+                  #RequestRun[#i] := FALSE;
+                  IF #Unit[#i].StoppedProven THEN
+                     #State[#i] := 0;
+                     #TransitionAge[#i] := 0.0;
+                  ELSE
+                     #TransitionAge[#i] := MIN(
+                        IN1 := #TransitionAge[#i] + #CycleSeconds,
+                        IN2 := #Cfg.StopTimeoutSeconds);
+                     IF #TransitionAge[#i] >= #Cfg.StopTimeoutSeconds THEN
+                        #FaultLatched[#i] := TRUE;
+                        #TransitionTimeout := TRUE;
+                     END_IF;
+                  END_IF;
+            ELSE
+               #CommandValid := FALSE;
+               #NeedsInit := TRUE;
+               #Initialized := FALSE;
+            END_CASE;
+         END_IF;
+         IF #Unit[#i].AutoRemote AND ((#State[#i] = 10) OR (#State[#i] = 30)) THEN
+            #anyTransition := TRUE;
+         END_IF;
+         IF #Unit[#i].CoolingProven AND NOT #Unit[#i].Fault THEN
+            #CommittedCount := #CommittedCount + 1;
+         ELSIF (#State[#i] = 10) AND #Unit[#i].AutoRemote
+            AND NOT #FaultLatched[#i] THEN
+            #CommittedCount := #CommittedCount + 1;
+         END_IF;
+      END_IF;
+   END_FOR;
+   IF NOT #CommandValid THEN
+      RETURN;
+   END_IF;
+
+   // One normal staging transition at a time; stop timeout blocks staging.
+   // This conservative draft does NOT claim fast failure recovery during post-run.
+   IF (#GapAge >= #Cfg.StageGapSeconds) AND NOT #anyTransition THEN
+      #candidate := 0;
+      IF #CommittedCount < #target THEN
+         #score := 1.0E+30;
+         FOR #i := 1 TO #Cfg.UnitCount DO
+            #mayStart := #Unit[#i].Installed AND #Unit[#i].AutoRemote
+               AND #Unit[#i].Available AND NOT #Unit[#i].Fault
+               AND NOT #FaultLatched[#i] AND #Unit[#i].StoppedProven
+               AND (#State[#i] = 0)
+               AND (#OffAge[#i] >= #Cfg.MinOffSeconds);
+            IF #mayStart AND (#Unit[#i].RunHours < #score) THEN
+               #candidate := #i;
+               #score := #Unit[#i].RunHours;
+            END_IF;
+         END_FOR;
+         IF #candidate > 0 THEN
+            #RequestRun[#candidate] := TRUE;
+            #State[#candidate] := 10;
+            #TransitionAge[#candidate] := 0.0;
+            #GapAge := 0.0;
+         ELSE
+            #NoStartCandidate := TRUE;
+         END_IF;
+      ELSIF #CommittedCount > #target THEN
+         #score := -1.0;
+         FOR #i := 1 TO #Cfg.UnitCount DO
+            IF #Unit[#i].Installed AND #Unit[#i].AutoRemote
+               AND (#State[#i] = 20) AND #Unit[#i].CoolingProven
+               AND (#OnAge[#i] >= #Cfg.MinRunSeconds)
+               AND (#Unit[#i].RunHours > #score) THEN
+               #candidate := #i;
+               #score := #Unit[#i].RunHours;
+            END_IF;
+         END_FOR;
+         IF #candidate > 0 THEN
+            #RequestRun[#candidate] := FALSE;
+            #State[#candidate] := 30;
+            #TransitionAge[#candidate] := 0.0;
+            #GapAge := 0.0;
+         END_IF;
+      END_IF;
+   END_IF;
+   #DemandShortfall := #CoolingCount < #target;
+END_FUNCTION_BLOCK
